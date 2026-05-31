@@ -1,5 +1,4 @@
 """
-### WYMÓG: Wykonaj dokumentację dla co najmniej 2 modułów (To jest moduł 2/2)
 Moduł: products
 Odpowiada za zarządzanie bazą produktów (plik Excel).
 Napisany w paradygmacie funkcyjnym (oddzielenie logiki od zapisu/odczytu).
