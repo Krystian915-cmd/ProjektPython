@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 import os
-from PIL import Image, ImageTk, ImageDraw  # Dodane ImageDraw do zaokrąglania przycisków
+from PIL import Image, ImageTk, ImageDraw  
 import products
 import customers
 import address
@@ -45,14 +45,11 @@ def create_rounded_button(parent, text, font, bg_color, fg_color, command, width
     Dynamicznie generuje gładki, zaokrąglony przycisk przy użyciu biblioteki PIL.
     Wymiary podawane są bezpośrednio w pikselach (px).
     """
-    # Tworzenie przezroczystej maski
     img = Image.new("RGBA", (width_px, height_px), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    # Rysowanie zaokrąglonego prostokąta o zadanym promieniu (radius)
     draw.rounded_rectangle([0, 0, width_px, height_px], radius=radius, fill=bg_color)
     photo = ImageTk.PhotoImage(img)
     
-    # Pobranie koloru tła rodzica, aby przycisk idealnie się wtapiał
     try:
         p_bg = parent.cget("bg")
     except:
@@ -67,7 +64,7 @@ def create_rounded_button(parent, text, font, bg_color, fg_color, command, width
     else:
         btn.config(text=text)
         
-    btn.image = photo  # Zachowanie referencji dla Garbage Collectora
+    btn.image = photo  
     return btn
 
 
@@ -116,10 +113,14 @@ def start_app():
     frame_shopping = tk.Frame(root, bg=BG_COLOR)
 
     # ==========================================
-    # EKRAN 1: MENU GŁÓWNE
+    # EKRAN 1: MENU GŁÓWNE (POPRAWIONE LOGO)
     # ==========================================
     try:
-        img_logo = Image.open("Zabka_logo_.jpg")
+        # Dynamiczne pobranie ścieżki do folderu 'images' dla Logo
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(BASE_DIR, "images", "Zabka_logo_.jpg")
+        
+        img_logo = Image.open(logo_path)
         img_logo = img_logo.resize((200, 140))  
         logo_tk = ImageTk.PhotoImage(img_logo)
         lbl_logo = tk.Label(frame_main, image=logo_tk, bg=BG_COLOR)
@@ -317,7 +318,7 @@ def start_app():
     create_rounded_button(frame_reg_customer, "Powrót", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, lambda: show_frame(frame_customer_menu), 220, 42, 12).pack()
 
     # ==========================================
-    # EKRAN 7: SKLEP WIZUALNY (KOSZYK ŻABKI)
+    # EKRAN 7: SKLEP WIZUALNY (RESPONSYWNY KOSZYK ŻABKI)
     # ==========================================
     def build_shopping_screen():
         for widget in frame_shopping.winfo_children():
@@ -392,8 +393,9 @@ def start_app():
             card = tk.Frame(products_grid, bg=CARD_BG, padx=10, pady=10, relief="flat")
             cards.append(card)
 
+            # POPRAWIONE: Szukanie obrazków produktów wewnątrz podfolderu 'images'
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            image_filename = os.path.join(BASE_DIR, f"{p_name.lower()}.jpg")
+            image_filename = os.path.join(BASE_DIR, "images", f"{p_name.lower()}.jpg")
             
             if os.path.exists(image_filename):
                 img = Image.open(image_filename).resize((80, 80))
@@ -428,7 +430,6 @@ def start_app():
                     cart_vars[name].set(new_val)
                     update_total_price()
 
-            # Zaokrąglone przyciski minus (-) i plus (+) wewnątrz kafelków produktów
             create_rounded_button(ctrl_frame, " − ", F_BOLD, ENTRY_BG, TEXT_LIGHT, 
                                   lambda n=p_name, ms=p_stock: change_qty(n, -1, ms), 35, 35, 8).pack(side="left", padx=5)
                                   
@@ -496,7 +497,6 @@ def start_app():
         # ----------------------------------------------------
         # PRZYCISKI AKCJI (DOLNY ZABLOKOWANY PANEL)
         # ----------------------------------------------------
-        # Główny zielony przycisk zakupu z reakcją na dynamiczną zmianę ceny (textvariable)
         create_rounded_button(bottom_bar, "", F_BOLD, ACCENT_GREEN, BTN_TEXT, handle_checkout, 
                               320, 52, 15, textvariable=btn_checkout_text).pack(pady=5)
         
