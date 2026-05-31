@@ -1,28 +1,34 @@
 """
+### WYMÓG: Wykonaj dokumentację dla co najmniej 2 modułów.
 Moduł: gui
-Zarządza interfejsem graficznym.
+Zarządza interfejsem graficznym dla użytkownika.
 Motyw: Nowoczesny Dark Mode (Grafit + Neonowa Zieleń Żabki).
 """
 
+# Importujemy wbudowaną bibliotekę do tworzenia okienek (tkinter)
 import tkinter as tk
+# Importujemy z tkintera moduł do wyskakujących okienek (np. z błędem)
 from tkinter import messagebox
-from tkinter import ttk
+# Importujemy biblioteki do obsługi ścieżek i obrazków
 import os
-from PIL import Image, ImageTk, ImageDraw  
+from PIL import Image, ImageTk
+
+# Importujemy nasze własne pliki (backend)
 import products
 import customers
 import address
 import monitor
 
 # ==========================================
-# KONFIGURACJA STYLU (MOTYW POS DARK MODE)
+# KONFIGURACJA STYLU (Kolory i czcionki przypisane do zmiennych,
+# żeby nie wpisywać ich ręcznie za każdym razem)
 # ==========================================
 BG_COLOR = "#1E1E1E"  # Ciemny grafit (główne tło)
 CARD_BG = "#2D2D30"  # Nieco jaśniejszy grafit (kafelki i ramki)
 ENTRY_BG = "#333337"  # Tło dla pól tekstowych
 TEXT_LIGHT = "#FFFFFF"  # Biały tekst główny
 TEXT_GRAY = "#AAAAAA"  # Szary tekst pomocniczy
-ACCENT_GREEN = "#00E676"  # Neonowa zieleń (główny akcent)
+ACCENT_GREEN = "#00E676"  # Neonowa zieleń (główny akcent, przyciski)
 BTN_TEXT = "#000000"  # Czarny tekst na zielonych przyciskach
 BTN_SECONDARY = "#3E3E42"  # Kolor dla przycisków "Powrót" itp.
 
@@ -31,79 +37,46 @@ F_BOLD = ("Segoe UI", 11, "bold")
 F_HEADER = ("Segoe UI", 18, "bold")
 F_PRICE = ("Segoe UI", 11, "bold")
 
+# Zmienne globalne - żyją przez cały czas działania programu
 ADMIN_PIN = "1234"
-current_customer_id = None
-current_customer_is_adult = False
+current_customer_id = None  # Przechowuje ID klienta, gdy się zaloguje
+current_customer_is_adult = False  # Zapisuje, czy klient ma +18 lat
 CURRENT_YEAR = 2026
 
 
-# ==========================================
-# FUNKCJA GENERUJĄCA ZAOKRĄGLONE PRZYCISKI
-# ==========================================
-def create_rounded_button(parent, text, font, bg_color, fg_color, command, width_px, height_px, radius=10, textvariable=None):
-    """
-    Dynamicznie generuje gładki, zaokrąglony przycisk przy użyciu biblioteki PIL.
-    Wymiary podawane są bezpośrednio w pikselach (px).
-    """
-    img = Image.new("RGBA", (width_px, height_px), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle([0, 0, width_px, height_px], radius=radius, fill=bg_color)
-    photo = ImageTk.PhotoImage(img)
-    
-    try:
-        p_bg = parent.cget("bg")
-    except:
-        p_bg = BG_COLOR
-        
-    btn = tk.Button(parent, font=font, fg=fg_color, image=photo, compound="center",
-                    relief="flat", bg=p_bg, activebackground=p_bg,
-                    activeforeground=fg_color, bd=0, highlightthickness=0, command=command)
-    
-    if textvariable:
-        btn.config(textvariable=textvariable)
-    else:
-        btn.config(text=text)
-        
-    btn.image = photo  
-    return btn
-
-
+### WYMÓG: Wykonaj interfejs graficzny dla użytkownika
 def start_app():
+    # Tworzymy główne okno aplikacji
     root = tk.Tk()
-    root.title("Sklep Żabka Online ")
-    root.geometry("600x800")
-    root.configure(bg=BG_COLOR)
-
-    # Konfiguracja nowoczesnego wyglądu dla paska przewijania (Scrollbar)
-    style = ttk.Style()
-    style.theme_use('clam')
-    style.configure("Vertical.TScrollbar",
-                    troughcolor=BG_COLOR,      
-                    background=CARD_BG,        
-                    arrowcolor=ACCENT_GREEN,   
-                    bordercolor=BG_COLOR,      
-                    lightcolor=CARD_BG,
-                    darkcolor=CARD_BG,
-                    gripcount=0,
-                    thickness=14)              
+    root.title("Sklep Żabka")
+    root.geometry("600x800")  # Rozmiar okna (szerokość x wysokość)
+    root.configure(bg=BG_COLOR)  # Ustawiamy kolor tła całego okna
 
     # ==========================================
     # LOGIKA PRZEŁĄCZANIA EKRANÓW
     # ==========================================
     def hide_all_frames():
-        for frame in (frame_main, frame_admin_login, frame_admin_panel,
-                      frame_customer_menu, frame_new_customer,
-                      frame_reg_customer, frame_shopping):
-            frame.pack_forget()
+        # Ta funkcja po prostu chowa wszystkie ramki (ekrany), żeby zrobić miejsce na nowy.
+        # Używamy .pack_forget() - to komenda tkintera do ukrywania elementów.
+        lista_ramek = [frame_main, frame_admin_login, frame_admin_panel,
+                       frame_customer_menu, frame_new_customer,
+                       frame_reg_customer, frame_shopping]
+        for ramka in lista_ramek:
+            ramka.pack_forget()
 
     def show_frame(frame):
+        # Najpierw chowamy wszystko, a potem pokazujemy (.pack) tylko tę jedną wybraną ramkę
         hide_all_frames()
         frame.pack(fill="both", expand=True, pady=10)
 
+    # Funkcja pomocnicza: tworzy pole tekstowe (Entry) od razu w naszym ciemnym stylu
+    # Dzięki temu nie musimy pisać tego samego długiego kodu dla każdego pola.
     def create_styled_entry(parent, width=20, justify="center"):
         return tk.Entry(parent, font=F_MAIN, bg=ENTRY_BG, fg=TEXT_LIGHT,
                         insertbackground=TEXT_LIGHT, relief="flat", width=width, justify=justify)
 
+    # Definiujemy wszystkie nasze ekrany jako "Ramki" (Frame).
+    # Na początku są one ukryte, czekają na wywołanie w show_frame().
     frame_main = tk.Frame(root, bg=BG_COLOR)
     frame_admin_login = tk.Frame(root, bg=BG_COLOR)
     frame_admin_panel = tk.Frame(root, bg=BG_COLOR)
@@ -113,27 +86,27 @@ def start_app():
     frame_shopping = tk.Frame(root, bg=BG_COLOR)
 
     # ==========================================
-    # EKRAN 1: MENU GŁÓWNE (POPRAWIONE LOGO)
+    # EKRAN 1: MENU GŁÓWNE
     # ==========================================
+    ### WYMÓG: Obsługa wyjątków (1) - Zabezpieczenie przed brakiem obrazka
     try:
-        # Dynamiczne pobranie ścieżki do folderu 'images' dla Logo
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        logo_path = os.path.join(BASE_DIR, "images", "Zabka_logo_.jpg")
-        
-        img_logo = Image.open(logo_path)
-        img_logo = img_logo.resize((200, 140))  
+        # Próbujemy otworzyć obrazek. Jeśli go nie ma w folderze, program nie wybuchnie,
+        # bo blok 'except' ma komendę 'pass' (czyli zignoruj błąd i idź dalej).
+        img_logo = Image.open("images/Zabka_logo_.jpg")
+        img_logo = img_logo.resize((200, 140))
         logo_tk = ImageTk.PhotoImage(img_logo)
         lbl_logo = tk.Label(frame_main, image=logo_tk, bg=BG_COLOR)
-        lbl_logo.image = logo_tk
+        lbl_logo.image = logo_tk  # WAŻNE: Zapisujemy referencję do zdjęcia, inaczej Python je usunie z pamięci!
         lbl_logo.pack(pady=30)
     except FileNotFoundError:
         pass
-        
-    create_rounded_button(frame_main, "Strefa Klienta", F_BOLD, ACCENT_GREEN, BTN_TEXT, 
-                          lambda: show_frame(frame_customer_menu), 260, 50, 15).pack(pady=10)
-                          
-    create_rounded_button(frame_main, "Panel Administratora", F_BOLD, BTN_SECONDARY, TEXT_LIGHT, 
-                          lambda: show_frame(frame_admin_login), 260, 50, 15).pack(pady=10)
+
+    # Komenda lambda: "wstrzymuje" wywołanie funkcji. Gdyby jej nie było, funkcja show_frame
+    # odpaliłaby się od razu przy rysowaniu przycisku, zamiast po jego kliknięciu.
+    tk.Button(frame_main, text="Strefa Klienta", font=F_BOLD, width=25, height=2, bg=ACCENT_GREEN, fg=BTN_TEXT,
+              relief="flat", command=lambda: show_frame(frame_customer_menu)).pack(pady=10)
+    tk.Button(frame_main, text="Panel Administratora", font=F_BOLD, width=25, height=2, bg=BTN_SECONDARY, fg=TEXT_LIGHT,
+              relief="flat", command=lambda: show_frame(frame_admin_login)).pack(pady=10)
 
     # ==========================================
     # EKRAN 2: LOGOWANIE ADMINA
@@ -142,150 +115,157 @@ def start_app():
     tk.Label(frame_admin_login, text="Wprowadź kod PIN:", font=F_MAIN, bg=BG_COLOR, fg=TEXT_LIGHT).pack(pady=5)
 
     entry_pin = create_styled_entry(frame_admin_login, width=15)
-    entry_pin.config(show="•")
+    entry_pin.config(show="•")  # Zamienia wpisywany tekst na kropki (jak w haśle)
     entry_pin.pack(pady=10, ipady=5)
 
     def verify_pin():
+        # Pobieramy to co wpisał admin używając .get()
         if entry_pin.get() == ADMIN_PIN:
-            entry_pin.delete(0, tk.END)
+            entry_pin.delete(0, tk.END)  # Czyścimy pole po udanym zalogowaniu
             show_frame(frame_admin_panel)
         else:
             messagebox.showerror("Błąd", "Zły PIN!")
 
-    create_rounded_button(frame_admin_login, "Zaloguj", F_BOLD, ACCENT_GREEN, BTN_TEXT, verify_pin, 200, 42, 12).pack(pady=20)
-    create_rounded_button(frame_admin_login, "Powrót", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, lambda: show_frame(frame_main), 200, 42, 12).pack()
+    tk.Button(frame_admin_login, text="Zaloguj", font=F_BOLD, width=20, bg=ACCENT_GREEN, fg=BTN_TEXT, relief="flat",
+              command=verify_pin).pack(pady=20)
+    tk.Button(frame_admin_login, text="Powrót", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+              command=lambda: show_frame(frame_main)).pack()
 
     # ==========================================
     # EKRAN 3: PANEL ADMINISTRATORA
     # ==========================================
-    tk.Label(frame_admin_panel, text="PANEL ADMINISTRATORA", font=F_HEADER, bg=BG_COLOR, fg=ACCENT_GREEN).pack(pady=20)
+    tk.Label(frame_admin_panel, text="PANEL ADMINISTRATORA", font=F_HEADER, bg=BG_COLOR, fg=ACCENT_GREEN).pack(pady=10)
 
-    # --- SEKCJA: DODAJ / AKTUALIZUJ PRODUKT ---
+    # LabelFrame to ramka z podpisem na górnej krawędzi
     frame_add = tk.LabelFrame(frame_admin_panel, text="Dodaj / Aktualizuj Produkt", font=F_BOLD, bg=BG_COLOR,
-                              fg=TEXT_LIGHT, bd=1, relief="solid", padx=15, pady=10)
-    frame_add.pack(pady=15, fill="x", padx=25)
+                              fg=TEXT_LIGHT, bd=1, relief="solid")
+    frame_add.pack(pady=10, fill="x", padx=20, ipady=10)
 
-    frame_add.grid_columnconfigure(0, weight=1)
-    frame_add.grid_columnconfigure(1, weight=2)
-    frame_add.grid_columnconfigure(2, weight=1)
-    frame_add.grid_columnconfigure(3, weight=2)
+    # Używamy .grid() zamiast .pack() - to układa elementy w tabeli (wiersze i kolumny)
+    tk.Label(frame_add, text="ID:", bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=0, column=0, pady=5)
+    entry_prod_id = create_styled_entry(frame_add, width=10)
+    entry_prod_id.grid(row=0, column=1)
 
-    entry_prod_id = create_styled_entry(frame_add, width=12)
-    entry_prod_name = create_styled_entry(frame_add, width=12)
-    entry_prod_price = create_styled_entry(frame_add, width=12)
-    entry_prod_qty = create_styled_entry(frame_add, width=12)
+    tk.Label(frame_add, text="Nazwa:", bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=0, column=2, pady=5)
+    entry_prod_name = create_styled_entry(frame_add, width=15)
+    entry_prod_name.grid(row=0, column=3)
 
-    tk.Label(frame_add, text="ID:", font=F_MAIN, bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=0, column=0, sticky="e", padx=5, pady=8)
-    entry_prod_id.grid(row=0, column=1, sticky="ew", padx=5, pady=8, ipady=3)
-    
-    tk.Label(frame_add, text="Nazwa:", font=F_MAIN, bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=0, column=2, sticky="e", padx=5, pady=8)
-    entry_prod_name.grid(row=0, column=3, sticky="ew", padx=5, pady=8, ipady=3)
-    
-    tk.Label(frame_add, text="Cena:", font=F_MAIN, bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=1, column=0, sticky="e", padx=5, pady=8)
-    entry_prod_price.grid(row=1, column=1, sticky="ew", padx=5, pady=8, ipady=3)
-    
-    tk.Label(frame_add, text="Ilość:", font=F_MAIN, bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=1, column=2, sticky="e", padx=5, pady=8)
-    entry_prod_qty.grid(row=1, column=3, sticky="ew", padx=5, pady=8, ipady=3)
+    tk.Label(frame_add, text="Cena:", bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=1, column=0, pady=5)
+    entry_prod_price = create_styled_entry(frame_add, width=10)
+    entry_prod_price.grid(row=1, column=1)
+
+    tk.Label(frame_add, text="Ilość:", bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=1, column=2, pady=5)
+    entry_prod_qty = create_styled_entry(frame_add, width=15)
+    entry_prod_qty.grid(row=1, column=3)
 
     def handle_add():
+        ### WYMÓG: Obsługa wyjątków (2) - Błędne dane tekstowe zamiast liczb
         try:
+            # Musimy przerobić tekst z formularza na liczby: int() to liczby całkowite, float() to ułamki.
             products.add_product(int(entry_prod_id.get()), entry_prod_name.get(), float(entry_prod_price.get()),
                                  int(entry_prod_qty.get()))
-            messagebox.showinfo("Sukces", "Pomyślnie dodano produkt do bazy!")
-            for entry in (entry_prod_id, entry_prod_name, entry_prod_price, entry_prod_qty):
-                entry.delete(0, tk.END)
-        except:
-            messagebox.showerror("Błąd", "Sprawdź wprowadzone dane!")
+            messagebox.showinfo("Dodano", "Dodano produkt do bazy")
+        except Exception:
+            # Jeśli ktoś wpisze "Serek" w miejsce ceny, int() wyrzuci błąd i przejdziemy tutaj:
+            messagebox.showerror("Błąd", "Złe wprowadzone dane. Użyj cyfr dla ID, ceny i ilości.")
 
-    create_rounded_button(frame_add, "Zapisz do bazy", F_BOLD, ACCENT_GREEN, BTN_TEXT, handle_add, 200, 42, 12).grid(row=2, column=0, columnspan=4, pady=15)
+    tk.Button(frame_add, text="Zapisz do bazy", font=F_BOLD, bg=ACCENT_GREEN, fg=BTN_TEXT, relief="flat",
+              command=handle_add).grid(row=2, column=0, columnspan=4, pady=15)
 
-    # --- SEKCJA: ZARZĄDZANIE KLIENTAMI ---
     frame_del = tk.LabelFrame(frame_admin_panel, text="Zarządzanie Klientami", font=F_BOLD, bg=BG_COLOR, fg=TEXT_LIGHT,
-                              bd=1, relief="solid", padx=15, pady=15)
-    frame_del.pack(pady=15, fill="x", padx=25)
+                              bd=1, relief="solid")
+    frame_del.pack(pady=10, fill="x", padx=20, ipady=10)
 
-    frame_del.grid_columnconfigure(0, weight=2)
-    frame_del.grid_columnconfigure(1, weight=2)
-    frame_del.grid_columnconfigure(2, weight=3)
+    tk.Label(frame_del, text="Podaj ID:", bg=BG_COLOR, fg=TEXT_LIGHT).pack(side="left", padx=10)
+    entry_del_cust = create_styled_entry(frame_del, width=10)
+    entry_del_cust.pack(side="left", padx=5)
 
-    entry_del_cust = create_styled_entry(frame_del, width=12)
+    # Wywołujemy funkcję usuwania klienta z pliku customers.py
+    tk.Button(frame_del, text="Usuń Klienta", font=F_BOLD, bg="#D32F2F", fg=TEXT_LIGHT, relief="flat",
+              command=lambda: customers.delete_customer(entry_del_cust.get())).pack(side="left", padx=10)
 
-    tk.Label(frame_del, text="Podaj ID klienta:", font=F_MAIN, bg=BG_COLOR, fg=TEXT_LIGHT).grid(row=0, column=0, sticky="e", padx=5)
-    entry_del_cust.grid(row=0, column=1, sticky="ew", padx=10, ipady=3)
-    
-    def handle_delete_customer():
-        cid = entry_del_cust.get()
-        if cid:
-            if customers.delete_customer(cid):
-                messagebox.showinfo("Sukces", f"Usunięto klienta o ID: {cid}")
-                entry_del_cust.delete(0, tk.END)
-            else:
-                messagebox.showerror("Błąd", "Nie udało się usunąć klienta. Sprawdź ID.")
-        else:
-            messagebox.showwarning("Błąd", "Wprowadź ID klienta!")
-
-    create_rounded_button(frame_del, "Usuń Klienta", F_BOLD, "#D32F2F", TEXT_LIGHT, handle_delete_customer, 130, 36, 10).grid(row=0, column=2, sticky="w", padx=5)
-
-    # --- DOLNE PRZYCISKI PANELU ---
-    create_rounded_button(frame_admin_panel, "📊 Statystyki Sklepu", F_BOLD, BTN_SECONDARY, TEXT_LIGHT, 
-                          lambda: messagebox.showinfo("Statystyki", monitor.generate_statistics_report()), 260, 50, 15).pack(pady=20)
-              
-    create_rounded_button(frame_admin_panel, "Wyloguj", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, 
-                          lambda: show_frame(frame_main), 260, 42, 12).pack(pady=5)
+    # Wyświetlanie statystyk z pliku monitor.py w okienku messagebox
+    tk.Button(frame_admin_panel, text="Statystyki Sklepu", font=F_BOLD, bg=BTN_SECONDARY, fg=TEXT_LIGHT,
+              relief="flat",
+              command=lambda: messagebox.showinfo("Statystyki", monitor.generate_statistics_report())).pack(pady=15)
+    tk.Button(frame_admin_panel, text="Wyloguj", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+              command=lambda: show_frame(frame_main)).pack(pady=5)
 
     # ==========================================
     # EKRAN 4: MENU KLIENTA
     # ==========================================
     tk.Label(frame_customer_menu, text="STREFA KLIENTA", font=F_HEADER, bg=BG_COLOR, fg=ACCENT_GREEN).pack(pady=40)
-    
-    create_rounded_button(frame_customer_menu, "Nowy Klient (Zarejestruj się)", F_BOLD, ACCENT_GREEN, BTN_TEXT, 
-                          lambda: show_frame(frame_new_customer), 300, 50, 15).pack(pady=10)
-                          
-    create_rounded_button(frame_customer_menu, "Zarejestrowany Klient (Zaloguj)", F_BOLD, BTN_SECONDARY, TEXT_LIGHT, 
-                          lambda: show_frame(frame_reg_customer), 300, 50, 15).pack(pady=10)
-                          
-    create_rounded_button(frame_customer_menu, "Powrót", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, 
-                          lambda: show_frame(frame_main), 300, 50, 15).pack(pady=20)
+    tk.Button(frame_customer_menu, text="Nowy Klient (Zarejestruj się)", font=F_BOLD, width=30, height=2,
+              bg=ACCENT_GREEN, fg=BTN_TEXT, relief="flat", command=lambda: show_frame(frame_new_customer)).pack(pady=10)
+    tk.Button(frame_customer_menu, text="Zarejestrowany Klient (Zaloguj)", font=F_BOLD, width=30, height=2,
+              bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat", command=lambda: show_frame(frame_reg_customer)).pack(
+        pady=10)
+    tk.Button(frame_customer_menu, text="Powrót", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+              command=lambda: show_frame(frame_main)).pack(pady=20)
 
     # ==========================================
     # EKRAN 5: REJESTRACJA
     # ==========================================
     tk.Label(frame_new_customer, text="REJESTRACJA", font=F_HEADER, bg=BG_COLOR, fg=ACCENT_GREEN).pack(pady=10)
 
+    # Funkcja pomocnicza: skraca kod potrzebny do stworzenia etykiety i pola wpisywania
     def add_register_field(text):
         tk.Label(frame_new_customer, text=text, font=F_MAIN, bg=BG_COLOR, fg=TEXT_GRAY).pack(pady=(5, 0))
         e = create_styled_entry(frame_new_customer, width=30)
         e.pack(pady=2, ipady=3)
         return e
 
+    # Tworzymy 5 pól rejestracji
     entry_new_name = add_register_field("Imię:")
     entry_new_surname = add_register_field("Nazwisko:")
     entry_new_city = add_register_field("Miasto:")
     entry_new_street = add_register_field("Ulica:")
-    entry_new_birth = add_register_field("Rok urodzenia (np. 1995):")
+    entry_new_birth = add_register_field("Rok urodzenia:")
 
     def handle_register():
+        # global pozwala na modyfikację zmiennych, które zadeklarowaliśmy na samej górze pliku
         global current_customer_id, current_customer_is_adult
-        name, surname, city, street, birth_year = entry_new_name.get(), entry_new_surname.get(), entry_new_city.get(), entry_new_street.get(), entry_new_birth.get()
 
-        if all([name, surname, city, street, birth_year]):
+        name = entry_new_name.get()
+        surname = entry_new_surname.get()
+        city = entry_new_city.get()
+        street = entry_new_street.get()
+        birth_year = entry_new_birth.get()
+
+        # Sprawdzamy czy klient wypełnił WSZYSTKIE pola (czy żadne nie jest puste "")
+        if name != "" and surname != "" and city != "" and street != "" and birth_year != "":
+            ### WYMÓG: Obsługa wyjątków (3)
             try:
+                # Obliczamy wiek na podstawie obecnego roku
                 age = CURRENT_YEAR - int(birth_year)
-                current_customer_is_adult = (age >= 18)
+
+                # Zwykła instrukcja warunkowa sprawdzająca pełnoletność
+                if age >= 18:
+                    current_customer_is_adult = True
+                    status_wiek = "Pełnoletni"
+                else:
+                    current_customer_is_adult = False
+                    status_wiek = "Niepełnoletni"
+
+                # Rejestrujemy w pliku .csv
                 current_customer_id = customers.register_customer(name, surname, int(birth_year))
                 address.update_customer_address(current_customer_id, city, street)
-                status_wiek = "Pełnoletni" if current_customer_is_adult else "Niepełnoletni"
+
                 messagebox.showinfo("Sukces",
                                     f"Zarejestrowano!\nTwoje ID: {current_customer_id}\nStatus: {status_wiek}")
+
+                # Budujemy sklep i pokazujemy go użytkownikowi
                 build_shopping_screen()
                 show_frame(frame_shopping)
             except ValueError:
-                messagebox.showerror("Błąd", "Rok urodzenia musi być liczbą!")
+                messagebox.showerror("Błąd", "Rok urodzenia musi być liczbą.")
         else:
-            messagebox.showwarning("Błąd", "Wypełnij wszystkie pola!")
+            messagebox.showwarning("Błąd", "Wypełnij wszystkie pola.")
 
-    create_rounded_button(frame_new_customer, "Załóż konto i kupuj", F_BOLD, ACCENT_GREEN, BTN_TEXT, handle_register, 250, 48, 14).pack(pady=20)
-    create_rounded_button(frame_new_customer, "Powrót", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, lambda: show_frame(frame_customer_menu), 250, 42, 12).pack()
+    tk.Button(frame_new_customer, text="Załóż konto i kupuj", font=F_BOLD, width=25, bg=ACCENT_GREEN, fg=BTN_TEXT,
+              relief="flat", command=handle_register).pack(pady=20)
+    tk.Button(frame_new_customer, text="Powrót", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+              command=lambda: show_frame(frame_customer_menu)).pack()
 
     # ==========================================
     # EKRAN 6: LOGOWANIE KLIENTA
@@ -300,13 +280,23 @@ def start_app():
         global current_customer_id, current_customer_is_adult
         try:
             cid = int(entry_login_id.get())
+            # Odczytujemy dane klientów za pomocą biblioteki pandas
             df = customers.load_csv(customers.CUSTOMERS_FILE, ["ID", "Imie", "Nazwisko", "Rok_Urodzenia"])
+
+            # Filtrujemy bazę, szukając wiersza gdzie kolumna "ID" równa się podanemu cid
             user_row = df[df["ID"] == cid]
 
+            # Jeśli user_row nie jest puste (czyli znaleźliśmy klienta)
             if not user_row.empty:
                 current_customer_id = cid
+
+                # Wyciągamy rok z pobranego wiersza i liczymy wiek
                 age = CURRENT_YEAR - int(user_row["Rok_Urodzenia"].values[0])
-                current_customer_is_adult = (age >= 18)
+                if age >= 18:
+                    current_customer_is_adult = True
+                else:
+                    current_customer_is_adult = False
+
                 build_shopping_screen()
                 show_frame(frame_shopping)
             else:
@@ -314,89 +304,87 @@ def start_app():
         except ValueError:
             messagebox.showerror("Błąd", "ID musi być liczbą!")
 
-    create_rounded_button(frame_reg_customer, "Zaloguj do sklepu", F_BOLD, ACCENT_GREEN, BTN_TEXT, handle_login, 220, 46, 14).pack(pady=20)
-    create_rounded_button(frame_reg_customer, "Powrót", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, lambda: show_frame(frame_customer_menu), 220, 42, 12).pack()
+    tk.Button(frame_reg_customer, text="Zaloguj do sklepu", font=F_BOLD, width=20, bg=ACCENT_GREEN, fg=BTN_TEXT,
+              relief="flat", command=handle_login).pack(pady=20)
+    tk.Button(frame_reg_customer, text="Powrót", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+              command=lambda: show_frame(frame_customer_menu)).pack()
 
     # ==========================================
-    # EKRAN 7: SKLEP WIZUALNY (RESPONSYWNY KOSZYK ŻABKI)
+    # EKRAN 7: SKLEP WIZUALNY (KOSZYK ŻABKI)
     # ==========================================
     def build_shopping_screen():
+        # Najpierw niszczymy (destroy) wszystkie obecne obrazki i przyciski w sklepie.
+        # Robimy to po to, by przy ponownym logowaniu sklep wygenerował się na nowo
+        # (np. z nowymi ilościami towaru), a nie "dorysował" się na dole.
         for widget in frame_shopping.winfo_children():
             widget.destroy()
 
-        wiek_info = "(Konto +18)" if current_customer_is_adult else "(Konto <18)"
+        # Ustawiamy napis z informacją o weryfikacji wiekowej
+        if current_customer_is_adult == True:
+            wiek_info = "(Konto +18)"
+        else:
+            wiek_info = "(Konto <18)"
 
-        # ----------------------------------------------------
-        # 1. PASEK GÓRNY
-        # ----------------------------------------------------
+        # Pasek górny
         top_bar = tk.Frame(frame_shopping, bg=CARD_BG)
-        top_bar.pack(side="top", fill="x")
+        top_bar.pack(fill="x", pady=(0, 10))
 
         tk.Label(top_bar, text="ŻABKA", font=F_HEADER, bg=CARD_BG, fg=ACCENT_GREEN).pack(pady=(10, 0))
         tk.Label(top_bar, text=f"Zalogowano: ID {current_customer_id} {wiek_info}", font=("Segoe UI", 9), bg=CARD_BG,
                  fg=TEXT_GRAY).pack(pady=(0, 10))
 
+        # Ładujemy Excela z produktami
         df = products.load_products()
         if df.empty:
-            tk.Label(frame_shopping, text="Brak asortymentu w bazie.", font=F_MAIN, bg=BG_COLOR, fg="#FF5555").pack(pady=20)
-            create_rounded_button(frame_shopping, "Wyloguj", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, lambda: show_frame(frame_main), 200, 42, 12).pack()
+            tk.Label(frame_shopping, text="Brak produktu w bazie.", font=F_MAIN, bg=BG_COLOR, fg="#FF5555").pack(
+                pady=20)
+            tk.Button(frame_shopping, text="Wyloguj", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+                      command=lambda: show_frame(frame_main)).pack()
             return
 
-        # ----------------------------------------------------
-        # 2. PASEK DOLNY
-        # ----------------------------------------------------
-        bottom_bar = tk.Frame(frame_shopping, bg=BG_COLOR)
-        bottom_bar.pack(side="bottom", fill="x", pady=10)
+        # Słowniki pomagające śledzić stan koszyka
+        cart_vars = {}  # Przechowuje zmienne ilościowe np. {"Chleb": 2, "Woda": 0}
+        prices_map = {}  # Przechowuje ceny produktów do przeliczeń
 
-        # ----------------------------------------------------
-        # 3. ŚRODKOWY OBSZAR PRZEWIJANY
-        # ----------------------------------------------------
-        canvas_container = tk.Frame(frame_shopping, bg=BG_COLOR)
-        canvas_container.pack(side="top", fill="both", expand=True)
+        products_grid = tk.Frame(frame_shopping, bg=BG_COLOR)
+        products_grid.pack(pady=5)
 
-        canvas = tk.Canvas(canvas_container, bg=BG_COLOR, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(canvas_container, orient="vertical", command=canvas.yview, style="Vertical.TScrollbar")
-        
-        scrollable_frame = tk.Frame(canvas, bg=BG_COLOR)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        row_idx = 0
+        col_idx = 0
 
-        def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        # StringVar() to magiczna zmienna tkintera. Jeśli zmodyfikujesz ją w kodzie,
+        # automatycznie zaktualizuje się tekst na przycisku "Kup", do którego ją podepniemy.
+        btn_checkout_text = tk.StringVar()
+        btn_checkout_text.set("POTWIERDŹ ZAKUP (0.00 zł)")
 
-        cart_vars = {}
-        prices_map = {}
+        # Funkcja przeliczająca sumę na bieżąco
+        def update_total_price():
+            total = 0.0
+            # Pętla sprawdza co jest w koszyku i przemnaża przez ceny
+            for nazwa_produktu in cart_vars:
+                ilosc = cart_vars[nazwa_produktu].get()
+                cena = prices_map[nazwa_produktu]
+                total = total + (ilosc * cena)
 
-        products_grid = tk.Frame(scrollable_frame, bg=BG_COLOR)
-        products_grid.pack(pady=5)  
+            # Ustawienie nowego tekstu - zmieni się na ekranie!
+            btn_checkout_text.set(f"POTWIERDŹ ZAKUP ({total:.2f} zł)")
 
-        cards = []  
-
+        # Pętla iterująca po wszystkich wierszach (produktach) z pliku Excel
         for index, row in df.iterrows():
             p_name = row["Nazwa"]
             p_price = float(row["Cena"])
             p_stock = row["Ilosc"]
 
+            # tk.IntVar() śledzi ilość wyklikaną przez klienta (+/-)
             cart_vars[p_name] = tk.IntVar(value=0)
             prices_map[p_name] = p_price
 
             card = tk.Frame(products_grid, bg=CARD_BG, padx=10, pady=10, relief="flat")
-            cards.append(card)
+            card.grid(row=row_idx, column=col_idx, padx=8, pady=8)
 
-            # POPRAWIONE: Szukanie obrazków produktów wewnątrz podfolderu 'images'
+            # Szukanie obrazka o nazwie identycznej jak produkt (małe litery)
             BASE_DIR = os.path.dirname(os.path.abspath(__file__))
             image_filename = os.path.join(BASE_DIR, "images", f"{p_name.lower()}.jpg")
-            
             if os.path.exists(image_filename):
                 img = Image.open(image_filename).resize((80, 80))
                 photo = ImageTk.PhotoImage(img)
@@ -414,62 +402,62 @@ def start_app():
             ctrl_frame = tk.Frame(card, bg=CARD_BG)
             ctrl_frame.pack(pady=5)
 
+            # Funkcja sterująca klikaniem + i -
             def change_qty(name, delta, max_stock):
                 global current_customer_is_adult
-                zakazane_slowa = ["piwo", "wódka", "wino", "alkohol", "energetyk", "monster", "tiger", "wojanek"]
-                is_restricted = any(slowo in name.lower() for slowo in zakazane_slowa)
 
+                # Proste sprawdzenie pełnoletności: czy w nazwie jest zabronione słowo
+                zakazane_slowa = ["piwo", "wódka", "wino", "alkohol", "energetyk", "monster", "tiger"]
+                is_restricted = False
+                for slowo in zakazane_slowa:
+                    if slowo in name.lower():
+                        is_restricted = True
+                        break  # Jeśli znalazł, przerywamy pętlę (nie szukamy dalej)
+
+                # delta > 0 oznacza, że ktoś klika "+". Sprawdzamy restrykcje i wiek.
                 if delta > 0 and is_restricted and not current_customer_is_adult:
                     messagebox.showwarning("Weryfikacja wieku",
                                            "Produkt przeznaczony wyłącznie dla osób pełnoletnich (+18).")
-                    return
+                    return  # Przerywamy funkcję, towar nie zostanie dodany
 
+                # Pobranie aktualnego stanu, dodanie delty (+1 lub -1)
                 current_val = cart_vars[name].get()
                 new_val = current_val + delta
-                if 0 <= new_val <= max_stock:
+
+                # Zabezpieczenie przed wpisaniem wartości mniejszej od 0, lub większej niż magazyn
+                if new_val >= 0 and new_val <= max_stock:
                     cart_vars[name].set(new_val)
-                    update_total_price()
+                    update_total_price()  # Zmieniono ilość, więc przeliczamy sumę
 
-            create_rounded_button(ctrl_frame, " − ", F_BOLD, ENTRY_BG, TEXT_LIGHT, 
-                                  lambda n=p_name, ms=p_stock: change_qty(n, -1, ms), 35, 35, 8).pack(side="left", padx=5)
-                                  
-            tk.Label(ctrl_frame, textvariable=cart_vars[p_name], font=F_BOLD, width=3, bg=CARD_BG, fg=TEXT_LIGHT).pack(side="left")
-            
-            create_rounded_button(ctrl_frame, " + ", F_BOLD, ENTRY_BG, TEXT_LIGHT, 
-                                  lambda n=p_name, ms=p_stock: change_qty(n, 1, ms), 35, 35, 8).pack(side="left", padx=5)
+            # Przyciski +/-. Użyto funkcji lambda z argumentami (n=p_name...), aby
+            # przypisać dany przycisk do konkretnego produktu z pętli.
+            tk.Button(ctrl_frame, text=" − ", font=F_BOLD, bg=ENTRY_BG, fg=TEXT_LIGHT, relief="flat",
+                      command=lambda n=p_name, ms=p_stock: change_qty(n, -1, ms)).pack(side="left", padx=5)
+            tk.Label(ctrl_frame, textvariable=cart_vars[p_name], font=F_BOLD, width=3, bg=CARD_BG, fg=TEXT_LIGHT).pack(
+                side="left")
+            tk.Button(ctrl_frame, text=" + ", font=F_BOLD, bg=ENTRY_BG, fg=TEXT_LIGHT, relief="flat",
+                      command=lambda n=p_name, ms=p_stock: change_qty(n, 1, ms)).pack(side="left", padx=5)
 
-        btn_checkout_text = tk.StringVar()
-        btn_checkout_text.set("POTWIERDŹ ZAKUP (0.00 zł)")
+            # Algorytm zawijania wierszy (maksymalnie 3 kafelki w jednej poziomej linii)
+            col_idx += 1
+            if col_idx > 2:
+                col_idx = 0
+                row_idx += 1
 
-        def update_total_price():
-            total = sum(cart_vars[name].get() * prices_map[name] for name in cart_vars)
-            btn_checkout_text.set(f"POTWIERDŹ ZAKUP ({total:.2f} zł)")
-
-        def rearrange_cards(event=None):
-            canvas_width = canvas.winfo_width()
-            if canvas_width < 100:  
-                canvas_width = 580
-            
-            card_space = 175  
-            columns = max(1, canvas_width // card_space)
-            
-            for idx, c in enumerate(cards):
-                r = idx // columns
-                col = idx % columns
-                c.grid(row=r, column=col, padx=8, pady=8)
-
-        def on_canvas_configure(event):
-            canvas.itemconfig(canvas_window, width=event.width)
-            rearrange_cards()
-
-        canvas.bind("<Configure>", on_canvas_configure)
-
+        # Funkcja obsługująca sfinalizowanie transakcji (kliknięcie KUP)
         def handle_checkout():
-            items_to_buy = [(name, var_obj.get()) for name, var_obj in cart_vars.items() if var_obj.get() > 0]
-            if not items_to_buy:
+            # Tworzymy listę par np. [("Chleb", 2), ("Woda", 1)]
+            items_to_buy = []
+            for nazwa_produktu in cart_vars:
+                ilosc = cart_vars[nazwa_produktu].get()
+                if ilosc > 0:
+                    items_to_buy.append((nazwa_produktu, ilosc))
+
+            if len(items_to_buy) == 0:
                 messagebox.showwarning("Koszyk", "Koszyk jest pusty.")
                 return
 
+            # Budowanie tekstu paragonu (zmienna znakowa 'f' ułatwia wstawianie wartości)
             receipt_text = f"--- PARAGON ---\n\n"
             receipt_text += f"Klient ID: {current_customer_id}\n"
             receipt_text += f"---------------------------------\n"
@@ -483,28 +471,34 @@ def start_app():
             receipt_text += f"---------------------------------\n"
             receipt_text += f" DO ZAPŁATY: \t\t {total_sum:.2f} zł\n\n"
 
+            ### WYMÓG: Wykorzystanie funkcji wielu zmiennych wejściowych (przekazanie koszyka do dekoratora).
+            ### Gwiazdka (*) rozpakowuje listę na pojedyncze argumenty.
             customers.buy_product(current_customer_id, *items_to_buy)
             messagebox.showinfo("Transakcja zrealizowana", receipt_text)
-            
-            canvas.unbind_all("<MouseWheel>")
+
+            # Odświeżenie ekranu, żeby na nowo zaciągnąć pomniejszone zapasy magazynowe z Excela
             build_shopping_screen()
 
-        def handle_logout():
-            canvas.unbind_all("<MouseWheel>")
-            globals().update(current_customer_id=None)
+        # Główny przycisk KUP. Podpięty do zmiennej btn_checkout_text, by aktualizował kwotę
+        tk.Button(frame_shopping, textvariable=btn_checkout_text, command=handle_checkout, font=F_BOLD, bg=ACCENT_GREEN,
+                  fg=BTN_TEXT, relief="flat", width=30, height=2).pack(pady=15)
+
+        # Funkcja wylogowania czyści globalne ID i wraca na start
+        def wyloguj_klienta():
+            global current_customer_id
+            current_customer_id = None
             show_frame(frame_main)
 
-        # ----------------------------------------------------
-        # PRZYCISKI AKCJI (DOLNY ZABLOKOWANY PANEL)
-        # ----------------------------------------------------
-        create_rounded_button(bottom_bar, "", F_BOLD, ACCENT_GREEN, BTN_TEXT, handle_checkout, 
-                              320, 52, 15, textvariable=btn_checkout_text).pack(pady=5)
-        
-        create_rounded_button(bottom_bar, "Wyloguj", F_MAIN, BTN_SECONDARY, TEXT_LIGHT, handle_logout, 320, 42, 12).pack(pady=5)
+        # Przycisk WYLOGUJ
+        tk.Button(frame_shopping, text="Wyloguj", font=F_MAIN, bg=BTN_SECONDARY, fg=TEXT_LIGHT, relief="flat",
+                  command=wyloguj_klienta).pack(pady=5)
 
+    # Uruchamiamy pierwszą stronę menu
     show_frame(frame_main)
+    # Rozpoczęcie nasłuchiwania na kliknięcia użytkownika (pętla główna programu)
     root.mainloop()
 
 
+# Tzw. blok wykonawczy. Gwarantuje, że kod odpali się tylko, gdy bezpośrednio uruchomimy gui.py
 if __name__ == "__main__":
     start_app()

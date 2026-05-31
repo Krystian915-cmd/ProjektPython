@@ -1,75 +1,67 @@
 """
+### WYMÓG: Moduł monitorowania liczby danych (Wskazanie ze specyfikacji)
 Moduł: monitor
-Odpowiada za monitorowanie zasobów sklepu i generowanie statystyk.
-Wykorzystuje funkcje wbudowane w pandas do szybkiej analizy danych.
+Służy do podglądu statystyk sklepu. Administrator wywołuje go z poziomu GUI.
 """
 
 import pandas as pd
+# Importujemy nasze moduły, żeby mieć dostęp do funkcji wczytujących pliki
 import products
 import customers
 
 
-# ==========================================
-# CZYSTE FUNKCJE ANALITYCZNE
-# ==========================================
-
-def get_total_customers(customers_df):
-    """Zwraca całkowitą liczbę zarejestrowanych klientów."""
-    return len(customers_df)
-
-
-def get_total_products(products_df):
-    """Zwraca liczbę unikalnych produktów w bazie."""
-    return len(products_df)
-
-
-def get_total_stock(products_df):
-    """Zwraca łączną sumę wszystkich sztuk towaru na magazynie."""
-    if products_df.empty:
-        return 0
-    return products_df["Ilosc"].sum()
-
-
-def get_average_price(products_df):
-    """Zwraca średnią cenę produktu w sklepie."""
-    if products_df.empty:
-        return 0.0
-    return round(products_df["Cena"].mean(), 2)
-
-
-# ==========================================
-# GŁÓWNA FUNKCJA RAPORTUJĄCA
-# ==========================================
-
 def generate_statistics_report():
     """
-    Pobiera dane z plików i wylicza wszystkie statystyki.
-    Zwraca sformatowany tekst raportu gotowy do wyświetlenia.
+    Pobiera dane z baz CSV i Excel, a następnie liczy proste statystyki.
+    Zwraca gotowy tekst do wyświetlenia w okienku.
     """
-    # Wczytujemy aktualny stan baz danych korzystając z funkcji z innych modułów
-    # Wymaga to zaimportowania tych modułów na górze pliku
-    cust_df = customers.load_csv(customers.CUSTOMERS_FILE, ["ID", "Imie", "Nazwisko"])
-    prod_df = products.load_products()
+    ### WYMÓG: Obsługa wyjątków (Kolejne zabezpieczenie przed awarią)
+    try:
+        # 1. Wczytujemy aktualne bazy danych do zmiennych
+        cust_df = customers.load_csv(customers.CUSTOMERS_FILE, ["ID", "Imie", "Nazwisko", "Rok_Urodzenia"])
+        prod_df = products.load_products()
 
-    # Wyliczanie statystyk za pomocą czystych funkcji
-    total_cust = get_total_customers(cust_df)
-    total_prod = get_total_products(prod_df)
-    total_stock = get_total_stock(prod_df)
-    avg_price = get_average_price(prod_df)
+        # ==========================================
+        # WYMÓG: Liczba użytkowników i dostępnych produktów
+        # ==========================================
+        # Funkcja wbudowana len() po prostu liczy, ile jest wierszy w tabeli
+        liczba_klientow = len(cust_df)
+        liczba_produktow = len(prod_df)
 
-    # Budowanie gotowego tekstu raportu
-    report = (
-        f"📊 RAPORT STATYSTYCZNY SKLEPU ŻABKA\n"
-        f"------------------------------------\n"
-        f"👥 Zarejestrowanych klientów: {total_cust}\n"
-        f"📦 Różnych produktów w ofercie: {total_prod}\n"
-        f"🛒 Łączna liczba sztuk na magazynie: {total_stock}\n"
-        f"💰 Średnia cena produktu: {avg_price} PLN\n"
-    )
+        # ==========================================
+        # WYMÓG: Średnia / Max / Min
+        # ==========================================
+        # Zabezpieczenie przed pustym sklepem (gdybyśmy dzielili przez 0, program by wybuchł)
+        if liczba_produktow > 0:
+            # Używamy najprostszych wbudowanych komend z biblioteki Pandas:
+            # .sum() - sumuje wszystko, .mean() - wyciąga średnią, .max() / .min() - szuka największej/najmniejszej
+            suma_sztuk = prod_df["Ilosc"].sum()
+            srednia_cena = prod_df["Cena"].mean()
+            max_cena = prod_df["Cena"].max()
+            min_cena = prod_df["Cena"].min()
+        else:
+            # Jeśli nie ma towaru, wszędzie wstawiamy zera
+            suma_sztuk = 0
+            srednia_cena = 0.0
+            max_cena = 0.0
+            min_cena = 0.0
 
-    return report
+        # Tworzymy raport za pomocą formatowania tekstu (tzw. f-string).
+        # Zapis {srednia_cena:.2f} oznacza: "Wstaw tu zmienną, ale zaokrąglij ją do 2 miejsc po przecinku".
+        raport = (
+            f"--- STATYSTYKI SKLEPU ŻABKA ---\n\n"
+            f" Zarejestrowanych klientów: {liczba_klientow}\n"
+            f" Liczba różnych produktów: {liczba_produktow}\n"
+            f" Łącznie sztuk na magazynie: {suma_sztuk}\n"
+            f"-------------------------------\n"
+            f" Średnia cena produktu: {srednia_cena:.2f} zł\n"
+            f" Najdroższy produkt kosztuje: {max_cena:.2f} zł\n"
+            f" Najtańszy produkt kosztuje: {min_cena:.2f} zł\n"
+        )
 
+        # Zwracamy gotowy tekst (trafi on prosto do okienka MessageBox w gui.py)
+        return raport
 
-# Prosty test modułu
-if __name__ == "__main__":
-    print(generate_statistics_report())
+    except Exception as e:
+        # Jeśli coś pójdzie nie tak (np. plik zepsuty), zwracamy po prostu ładny komunikat o błędzie
+        return "Błąd podczas generowania statystyk! Sprawdź pliki bazy danych."

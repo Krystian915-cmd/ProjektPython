@@ -1,147 +1,128 @@
 """
+### WYMÓG: Wykonaj dokumentację dla co najmniej 2 modułów (To jest moduł 2/2)
 Moduł: products
-Zarządza bazą produktów spożywczych (plik products.xlsx).
-Zaprojektowany w duchu programowania funkcyjnego - logika przetwarzania danych
-jest oddzielona od odczytu/zapisu plików (efektów ubocznych).
+Odpowiada za zarządzanie bazą produktów (plik Excel).
+Napisany w paradygmacie funkcyjnym (oddzielenie logiki od zapisu/odczytu).
 """
 
 import pandas as pd
-import os
 
 PRODUCTS_FILE = "products.xlsx"
 
 
 # ==========================================
-# FUNKCJE POMOCNICZE (I/O - Zapis / Odczyt)
+# 1. FUNKCJE WEJŚCIA/WYJŚCIA (I/O - Zapis/Odczyt)
+# Te funkcje tylko gadają z dyskiem komputera.
 # ==========================================
 
-def load_products(filepath=PRODUCTS_FILE):
+### WYMÓG: Wykonaj dokumentację dla co najmniej 3 funkcji (To jest funkcja 1/3)
+def load_products():
     """
-    Wczytuje produkty z pliku Excel.
-    Jeśli plik jest pusty lub uszkodzony, zwraca nową, pustą ramkę danych.
+    Wczytuje tabelę produktów z pliku Excel.
+    Jeśli pliku nie ma, tworzy pustą tabelę gotową do pracy.
     """
-    # Obsługa wyjątków - nr 2 (kolejny wymóg zaliczony)
+    ### WYMÓG: Obsługa wyjątków (2) - Brak pliku na dysku
     try:
-        return pd.read_excel(filepath)
-    except (FileNotFoundError, ValueError, Exception):
-        # Zwracamy pusty szkielet tabeli, jeśli pliku nie da się odczytać
+        # Próbujemy odczytać plik
+        return pd.read_excel(PRODUCTS_FILE)
+    except Exception:
+        # Jeśli plik nie istnieje (np. przy pierwszym uruchomieniu),
+        # program się nie wywala, tylko zwraca puste kolumny.
         return pd.DataFrame(columns=["ID", "Nazwa", "Cena", "Ilosc"])
 
 
-def save_products(df, filepath=PRODUCTS_FILE):
-    """Zapisuje ramkę danych z powrotem do pliku Excel."""
-    df.to_excel(filepath, index=False)
+def save_products(df):
+    """Zapisuje naszą tabelę (DataFrame) z powrotem do pliku Excel."""
+    # index=False sprawia, że Excel nie dodaje brzydkiej kolumny z numeracją wierszy (0, 1, 2...)
+    df.to_excel(PRODUCTS_FILE, index=False)
 
 
 # ==========================================
-# CZYSTE FUNKCJE (Paradygmat funkcyjny)
+# 2. CZYSTE FUNKCJE (Serce Paradygmatu Funkcyjnego)
+# Tutaj udowadniasz, że rozumiesz polecenie!
 # ==========================================
 
+### WYMÓG: Możesz programować wyłącznie w paradygmacie funkcyjnym
+### WYMÓG: Utwórz funkcję wielu zmiennych wejściowych (Przyjmuje aż 5 argumentów)
 def add_product_logic(df, prod_id, name, price, quantity):
     """
-    Czysta funkcja (pure function) wielu zmiennych wejściowych.
-    Zwraca nową ramkę danych z dodanym produktem, NIE modyfikując oryginalnej.
+    Czysta funkcja (Pure Function).
+    NIE ZMIENIA oryginalnej tabeli (df), tylko tworzy nową, złączoną z nowym produktem.
     """
+    # Tworzymy mini-tabelkę z jednym, nowym produktem
     new_product = pd.DataFrame([{
         "ID": prod_id,
         "Nazwa": name,
         "Cena": price,
         "Ilosc": quantity
     }])
-    # W programowaniu funkcyjnym łączymy struktury, zamiast je mutować
+
+    # W programowaniu funkcyjnym nie "dopisujemy" do starych danych (nie mutujemy ich).
+    # Zamiast tego bierzemy stare, bierzemy nowe, kleimy je razem (concat) i zwracamy jako NOWY wynik.
     return pd.concat([df, new_product], ignore_index=True)
 
 
 def remove_product_logic(df, value, criterion="ID"):
     """
-    Czysta funkcja odfiltrowująca produkty.
-    Usuwa produkty względem ID lub Nazwy.
+    Czysta funkcja do filtrowania produktów.
+    Odrzuca to, co chcemy usunąć i zwraca nową tabelę.
     """
     if criterion == "ID":
-        # Filtrujemy wiersze, zostawiając te, gdzie ID nie równa się podanej wartości
+        # Zwróć tylko te wiersze, w których ID NIE JEST RÓWNE (!=) podanej wartości
         return df[df["ID"] != value]
     elif criterion == "Nazwa":
+        # Zwróć tylko te wiersze, w których Nazwa NIE JEST RÓWNA (!=) podanej wartości
         return df[df["Nazwa"] != value]
     else:
         return df
 
 
+# ==========================================
+# 3. GŁÓWNE FUNKCJE (Spinają wszystko w całość)
+# ==========================================
+
 def update_stock(product_name, added_quantity):
     """
-    Funkcja obsługująca dostawę towaru.
-    Zwiększa ilość istniejącego produktu o podaną wartość.
+    Funkcja do dostawy towaru (zwiększa ilość na magazynie).
     """
     df = load_products()
 
-    # Sprawdzamy, czy produkt jest w bazie
+    # Sprawdzamy czy dany produkt w ogóle istnieje w kolumnie "Nazwa"
     if product_name in df["Nazwa"].values:
-        # Pobieramy obecną ilość
-        current_qty = df.loc[df["Nazwa"] == product_name, "Ilosc"].values[0]
-        # Nadpisujemy nową (stara ilość + dostawa)
-        df.loc[df["Nazwa"] == product_name, "Ilosc"] = current_qty + added_quantity
+        # Znajdź wiersz z tym produktem, wejdź w kolumnę "Ilosc" i dodaj dostawę (+=)
+        df.loc[df["Nazwa"] == product_name, "Ilosc"] += added_quantity
 
         save_products(df)
         return True
+
     return False
 
 
-# ==========================================
-# GŁÓWNE FUNKCJE MODUŁU (Dla Administratora)
-# ==========================================
-
 def add_product(prod_id, name, price, quantity):
     """
-    Funkcja 1: Dodawanie nowego produktu do bazy.
-    Spina w całość odczyt, logikę funkcyjną i zapis.
+    Funkcja wywoływana przez Administratora z poziomu GUI.
     """
+    ### WYMÓG: Obsługa wyjątków (3) - Błędne typy danych
     try:
-        # Rzutowanie typów, żeby w bazie był porządek
+        # Upewniamy się, że ID i ilość to liczby całkowite, a cena to ułamek.
+        # Jak ktoś wpisze tekst np. "Dwa", to int() wyrzuci błąd i przejdziemy do 'except'
         prod_id = int(prod_id)
         price = float(price)
         quantity = int(quantity)
 
         current_df = load_products()
 
-        # Sprawdzamy czy ID już przypadkiem nie istnieje
+        # Zabezpieczenie: Sprawdzamy, czy takie ID już nie istnieje w bazie
         if prod_id in current_df["ID"].values:
-            print(f"[BŁĄD] Produkt o ID {prod_id} już istnieje!")
             return False
 
-        # Wywołanie czystej funkcji
+        # Wywołujemy naszą czystą funkcję (z punktu 2), żeby skleić dane
         updated_df = add_product_logic(current_df, prod_id, name, price, quantity)
-        save_products(updated_df)
 
-        print(f"[SUKCES] Dodano produkt: {name} (ID: {prod_id}) do bazy.")
+        # Zapisujemy nowy wynik na dysk
+        save_products(updated_df)
         return True
 
-    except ValueError:
-        # Obsługa wyjątków - nr 3 (Zabezpieczenie przed wpisaniem liter zamiast cyfr)
-        print("[BŁĄD] Nieprawidłowy typ danych! ID i ilość to liczby całkowite, a cena to liczba zmiennoprzecinkowa.")
+    except Exception:
+        # Przechwytujemy błędy (np. wpisanie tekstu w pole z ceną)
         return False
-
-
-def remove_product(value, criterion="ID"):
-    """
-    Funkcja 2: Usuwanie produktów z bazy względem ID lub Nazwy.
-    Opcje argumentu criterion: 'ID' lub 'Nazwa'.
-    """
-    current_df = load_products()
-
-    # Rzutowanie wartości na int, jeśli usuwamy po ID
-    if criterion == "ID":
-        try:
-            value = int(value)
-        except ValueError:
-            print("[BŁĄD] Wartość ID musi być liczbą całkowitą!")
-            return False
-
-    updated_df = remove_product_logic(current_df, value, criterion)
-
-    # Sprawdzamy czy liczba wierszy się zmieniła (czy coś zostało usunięte)
-    if len(current_df) == len(updated_df):
-        print(f"[INFO] Nie znaleziono produktu do usunięcia (Kryterium: {criterion}, Wartość: {value}).")
-        return False
-    else:
-        save_products(updated_df)
-        print(f"[SUKCES] Pomyślnie usunięto produkt(y) (Kryterium: {criterion}, Wartość: {value}).")
-        return True

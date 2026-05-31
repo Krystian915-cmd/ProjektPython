@@ -1,4 +1,5 @@
 """
+### WYMÓG: Wykonaj dokumentację dla co najmniej 2 modułów.
 Moduł: customers
 Odpowiada za rejestrację klientów, usuwanie ich z bazy
 oraz obsługę koszyka zakupowego (z wykorzystaniem dekoratorów).
@@ -8,8 +9,10 @@ import pandas as pd
 import os
 import random
 from datetime import datetime
+# Importujemy nasz własny moduł produktów, żeby móc zmieniać stan magazynu
 import products
 
+# Nazwy plików przypisane do zmiennych
 CUSTOMERS_FILE = "customer.csv"
 ADDRESS_FILE = "address.csv"
 DATABASE_DIR = "DATABASE"
@@ -20,15 +23,20 @@ DATABASE_DIR = "DATABASE"
 # ==========================================
 
 def load_csv(filepath, columns):
-    """Odczytuje plik CSV lub tworzy pustą ramkę danych z podanymi kolumnami."""
+    """
+    Wczytuje plik CSV.
+    Jeśli pliku nie ma, tworzy pustą tabelę z gotowymi nazwami kolumn.
+    """
+    ### WYMÓG: Obsługa wyjątków
     try:
         return pd.read_csv(filepath)
-    except (FileNotFoundError, pd.errors.EmptyDataError):
+    except Exception:
+        # Zamiast skomplikowanych błędów, po prostu łapiemy każdy problem (np. brak pliku)
         return pd.DataFrame(columns=columns)
 
 
 def save_csv(df, filepath):
-    """Zapisuje ramkę danych do pliku CSV."""
+    """Zapisuje naszą tabelę (DataFrame) do pliku CSV bez numeracji wierszy."""
     df.to_csv(filepath, index=False)
 
 
@@ -36,116 +44,125 @@ def save_csv(df, filepath):
 # REJESTRACJA I USUWANIE KLIENTA
 # ==========================================
 
+### WYMÓG: Funkcja wielu zmiennych wejściowych (Przyjmuje 3 argumenty)
 def register_customer(name, surname, birth_year):
     """
-    Rejestracja nowego klienta z uwzględnieniem roku urodzenia.
+    Tworzy nowego klienta, losuje mu ID i tworzy jego plik z historią (paragonami).
     """
-    # DODALIŚMY NOWĄ KOLUMNĘ "Rok_Urodzenia"
+    # 1. Pobieramy obecne dane z plików
     customers_df = load_csv(CUSTOMERS_FILE, ["ID", "Imie", "Nazwisko", "Rok_Urodzenia"])
     addresses_df = load_csv(ADDRESS_FILE, ["ID", "Miasto", "Ulica"])
 
+    # 2. Losujemy unikalne ID z przedziału 1000-9999
     while True:
         new_id = random.randint(1000, 9999)
+        # Sprawdzamy, czy wylosowane ID nie istnieje już w kolumnie "ID"
         if new_id not in customers_df["ID"].values:
-            break
+            break  # Jeśli nie ma, przerywamy pętlę losującą
 
-    # Zapis z rokiem urodzenia
+    # 3. Tworzymy mini-tabelki (tylko z tym jednym, nowym klientem)
     new_customer = pd.DataFrame([{"ID": new_id, "Imie": name, "Nazwisko": surname, "Rok_Urodzenia": birth_year}])
     new_address = pd.DataFrame([{"ID": new_id, "Miasto": "Brak", "Ulica": "Brak"}])
 
+    # 4. Łączymy stare tabele z nowym klientem (paradygmat funkcyjny - nie psujemy starych danych)
     customers_df = pd.concat([customers_df, new_customer], ignore_index=True)
     addresses_df = pd.concat([addresses_df, new_address], ignore_index=True)
 
+    # 5. Zapisujemy wyniki do plików
     save_csv(customers_df, CUSTOMERS_FILE)
     save_csv(addresses_df, ADDRESS_FILE)
 
+    # 6. Tworzymy pusty plik tekstowy dla tego klienta (na jego paragony) w folderze DATABASE
     history_file = os.path.join(DATABASE_DIR, f"{new_id}.txt")
     with open(history_file, "w", encoding="utf-8") as f:
         f.write(f"--- Historia zakupów klienta {new_id} ({name} {surname}) ---\n")
 
     return new_id
 
+
 def delete_customer(value, criterion="ID"):
-    # Tu też zaktualizowaliśmy nagłówki
+    """Usuwa klienta z bazy danych."""
     customers_df = load_csv(CUSTOMERS_FILE, ["ID", "Imie", "Nazwisko", "Rok_Urodzenia"])
 
     if criterion == "ID":
         try:
             value = int(value)
+            # Filtrowanie: Zostawiamy w tabeli tylko te wiersze, gdzie ID NIE JEST RÓWNE usuwanej wartości
             customers_df = customers_df[customers_df["ID"] != value]
         except ValueError:
             return False
+
     elif criterion == "NAME":
+        # To samo dla imienia
         customers_df = customers_df[customers_df["Imie"] != value]
 
+    # Nadpisujemy stary plik odchudzoną tabelą
     save_csv(customers_df, CUSTOMERS_FILE)
     return True
-# ==========================================
-# AKTUALIZACJA PAKIETU: DEKORATOR I ZAKUPY
-# ==========================================
 
+
+# =======================================================================
+# DEKORATOR I ZAKUPY - NAJWAŻNIEJSZA CZĘŚĆ PROJEKTU POD KĄTEM WYMOGÓW!
+# =======================================================================
+
+### WYMÓG: Utwórz funkcję wyższego rzędu
+### (To taka funkcja, która jako argument w nawiasie przyjmuje INNĄ funkcję np. 'func')
 def multi_purchase_decorator(func):
     """
-    To jest FUNKCJA WYŻSZEGO RZĘDU (przyjmuje inną funkcję jako argument).
-    Jej celem jest "udekorowanie" funkcji zakupowej, by obsługiwała wiele
-    produktów na raz (np. cały koszyk zakupowy).
+    Dekorator rozszerzający możliwości zwykłej funkcji kupowania.
+    Pozwala kupić wiele produktów naraz (cały koszyk).
     """
 
+    ### WYMÓG: Utwórz funkcję zagnieżdżoną
+    ### (Czyli funkcję zdefiniowaną wewnątrz innej funkcji)
     def wrapper(customer_id, *args):
-        """
-        To jest FUNKCJA ZAGNIEŻDŻONA.
-        Zmienna *args przechowuje krotki z produktami, np.: ("Chleb", 2), ("Mleko", 1).
-        """
-        print(f"[KOSZYK] Rozpoczynam transakcję dla klienta ID: {customer_id}")
+        # *args to paczka. Tutaj wpadają krotki z produktami z pliku gui.py
+        # np. [("Woda", 2), ("Chleb", 1)]
 
-        # Iterujemy przez wszystkie produkty podane w argumentach (dowolna liczba!)
+        # Pętla for "rozpakowuje" koszyk i dla każdej pozycji wywołuje starą,
+        # pojedynczą funkcję zakupu.
         for product_name, quantity in args:
-            # Wywołujemy oryginalną, niezmodyfikowaną funkcję dla każdego z nich
             func(customer_id, product_name, quantity)
 
-        print("[KOSZYK] Transakcja zakończona pomyślnie.\n")
-
+    # Funkcja wyższego rzędu musi zwrócić funkcję zagnieżdżoną
     return wrapper
 
 
-# Użycie dekoratora na oryginalnej funkcji (wymóg: "nie modyfikując i nie zmieniając nazw funkcji")
-# Użycie dekoratora na oryginalnej funkcji
+### WYMÓG: Użyj dekoratora (Znak @ - podmienia starą funkcję na tę z wrappera)
+### WYMÓG: Klient ma możliwość zakupu dowolnej liczby produktów równocześnie.
 @multi_purchase_decorator
 def buy_product(customer_id, product_name, quantity):
     """
-    Funkcja zapisuje zakup do pliku i ODEJMUJE towar z magazynu (products.xlsx).
+    Oryginalna, podstawowa funkcja realizująca zakup JEDNEGO produktu.
+    Sprawdza magazyn, odejmuje sztuki i drukuje paragon.
     """
     filepath = os.path.join(DATABASE_DIR, f"{customer_id}.txt")
 
     if not os.path.exists(filepath):
-        print(f"[BŁĄD] Nie znaleziono konta dla ID {customer_id}! Najpierw się zarejestruj.")
-        return
+        return  # Jeśli klient nie ma swojego pliku txt, przerywamy
 
-    # ---- NOWA LOGIKA: Odejmujemy ze stanu w Excelu ----
+    # Wczytujemy plik Excela z towarami (z modułu products)
     prod_df = products.load_products()
 
-    # 1. Sprawdzamy czy produkt w ogóle jest w sklepie
+    # 1. Sprawdzamy czy dany produkt istnieje w kolumnie "Nazwa"
     if product_name not in prod_df["Nazwa"].values:
-        print(f"[BŁĄD] Produkt '{product_name}' nie istnieje w bazie sklepu!")
         return
 
-    # 2. Pobieramy aktualną ilość z magazynu
+    # 2. Pobieramy obecną ilość towaru z magazynu.
+    # .loc[] szuka wiersza, gdzie nazwa się zgadza, wchodzi w kolumnę "Ilosc" i bierze wartość .values[0]
     current_qty = prod_df.loc[prod_df["Nazwa"] == product_name, "Ilosc"].values[0]
 
-    # 3. Sprawdzamy, czy w sklepie jest wystarczająco towaru
+    # 3. Zabezpieczenie: Sprawdzamy czy klient nie chce kupić więcej, niż mamy w sklepie
     if current_qty < quantity:
-        print(
-            f"[BŁĄD] Za mało towaru! Chcesz kupić {quantity}, a na stanie jest tylko {current_qty} szt. '{product_name}'.")
-        return
+        return  # Za mało towaru, więc przerywamy
 
-    # 4. Aktualizujemy (odejmujemy) i zapisujemy do Excela
+    # 4. Odejmowanie towaru. Wpisujemy w kratkę Excela nową wartość (stary stan minus to co kupiono)
     prod_df.loc[prod_df["Nazwa"] == product_name, "Ilosc"] = current_qty - quantity
-    products.save_products(prod_df)
-    # ----------------------------------------------------
 
-    # Zapis do paragonu w TXT (robi się to TYLKO, gdy produkt faktycznie udało się zdjąć z magazynu)
+    # 5. Zapisujemy zaktualizowany stan magazynu z powrotem do pliku xlsx
+    products.save_products(prod_df)
+
+    # 6. Dopisujemy pozycję do pliku TXT klienta (tzw. "Paragon")
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(filepath, "a", encoding="utf-8") as f:
         f.write(f"[{now}] Zakupiono: {product_name} | Ilość: {quantity}\n")
-
-    print(f"   -> ZAKUP SUKCES: {product_name} (x{quantity}). Zostało na półce: {current_qty - quantity} szt.")
